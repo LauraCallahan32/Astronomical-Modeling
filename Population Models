@@ -1,0 +1,176 @@
+# Here I model a fox and rabbit population using the Lotka-Volterra Model and explore how initial conditions and the addition of predators affect the populations
+# I also model an Epidemic and use models to predict when the peak is and how many beds hospitals should prepare
+
+#Part 1: Foxes and Rabbits
+
+import numpy as np
+from scipy.integrate import solve_ivp
+import matplotlib.pyplot as plt
+import math
+
+def lotka_volterra(t, y, alpha, beta, gamma, delta):
+    """Lotka-Volterra model"""
+    x, y = y
+    dx_dt = alpha * x - beta * x * y  #rate of change of prey (rabbit) population
+    dy_dt = delta * x * y - gamma * y  #rate of change of predator (fox) population
+    return [dx_dt, dy_dt]
+
+#initial conditions
+x0 = 30  #Rabbits
+y0 = 30   #Foxes
+initial_conditions = [x0, y0]
+
+t_span = (0, 200)
+t_eval = np.linspace(0, 200, 1000)
+
+#parameters: Alter these to see various phase diagrams
+alpha = 0.5  #Prey growth rate
+beta = 0.05  #Predation rate
+gamma = 0.5  #Predator death rate
+delta = 0.03 #Reproduction rate of predators per consumed prey
+
+#solving the differential equations
+sol1 = solve_ivp(lotka_volterra, t_span, initial_conditions, args=(alpha, beta, gamma, delta), t_eval=t_eval, rtol = 1e-9)
+
+alpha = 1  #Prey growth rate
+beta = 0.05  #Predation rate
+gamma = 0.5  #Predator death rate
+delta = 0.03 #Reproduction rate of predators per consumed prey
+
+sol2 = solve_ivp(lotka_volterra, t_span, initial_conditions, args=(alpha, beta, gamma, delta), t_eval=t_eval, rtol = 1e-9)
+
+alpha = 0.5  #Prey growth rate
+beta = 0.025  #Predation rate
+gamma = 0.75  #Predator death rate
+delta = 0.03 #Reproduction rate of predators per consumed prey
+
+sol3 = solve_ivp(lotka_volterra, t_span, initial_conditions, args=(alpha, beta, gamma, delta), t_eval=t_eval, rtol = 1e-9)
+
+alpha = 1  #Prey growth rate
+beta = (1/30)  #Predation rate
+gamma = 0.5  #Predator death rate
+delta = (1/60) #Reproduction rate of predators per consumed prey
+
+sol4 = solve_ivp(lotka_volterra, t_span, initial_conditions, args=(alpha, beta, gamma, delta), t_eval=t_eval, rtol = 1e-9)
+
+plt.plot(sol1.y[0], sol1.y[1], label = 'Trial 1')
+plt.plot(sol2.y[0], sol2.y[1], label = 'Trial 2')
+plt.plot(sol3.y[0], sol3.y[1], label = 'Trial 3')
+plt.scatter(sol4.y[0], sol4.y[1], color = 'r', label = 'Stationary Point (Trial 4)')
+plt.xlabel('Rabbit Population')
+plt.ylabel('Fox Population')
+plt.title('Lotka-Volterra Phase Diagram')
+plt.xlim(0, 73)
+plt.ylim(0, 43)
+plt.legend()
+plt.grid()
+plt.show()
+
+#Now I will show plots of the populations varying over time, rather than in phase diagrams:
+#Choose one set of parameters: sol1
+
+plt.plot(sol1.t, sol1.y[0], label='Prey (Rabbits)')
+plt.plot(sol1.t, sol1.y[1], label='Predators (Foxes)')
+plt.xlabel('Time (days')
+plt.ylabel('Populations')
+plt.title('Lotka-Volterra Populations vs. Time')
+plt.legend()
+plt.grid()
+plt.show()
+
+#Now I will add in an additional Predator (wolves); in this model, the wolves only prey on foxes, and the foxes only prey on rabbits
+
+def lotka_volterra_extended(t, y, alpha, beta, gamma, delta, epsilon, theta):
+    """extended Lotka-Volterra model"""
+    x, y, z = y
+    dx_dt = alpha * x - beta * x * y  #rate of change of prey (rabbit) population
+    dy_dt = delta * x * y - gamma * y - epsilon * y * z  #rate of change of predator (fox) population
+    dz_dt = epsilon * y * z - theta * z  #rate of change of secondary predator (wolf) population
+    return [dx_dt, dy_dt, dz_dt]
+
+#initial conditions:
+x0 = 30  #Rabbits
+y0 = 30   #Foxes
+z0 = 30   #Wolves
+initial_conditions = [x0, y0, z0]
+
+#parameters:
+alpha = 0.5    #Prey growth rate
+beta = 0.05    #Predation rate of prey by the primary predator
+gamma = 0.5    #Death rate of the primary predator (foxes)
+delta = 0.03   #Reproduction rate of the primary predator per consumed prey
+epsilon = 0.005 #Predation rate of the primary predator by the secondary predator (foxes by wolves)
+theta = 0.05    #Death rate of the secondary predator (wolves)
+
+t_span = (0, 100)
+t_eval = np.linspace(0, 100, 1000)
+
+#solving the differential equations
+sol = solve_ivp(lotka_volterra_extended, t_span, initial_conditions, args=(alpha, beta, gamma, delta, epsilon, theta), t_eval=t_eval, rtol = 1e-9)
+
+plt.plot(sol.t, sol.y[0], label='Prey (Rabbits)')
+plt.plot(sol.t, sol.y[1], label='Predators (Foxes)')
+plt.plot(sol.t, sol.y[2], label='Secondary Predators (Wolves)')
+plt.xlabel('Time (days)')
+plt.ylabel('Populations')
+plt.title('Lotka-Volterra Populations vs. Time')
+plt.ylim(0, 90)
+plt.legend()
+plt.grid()
+plt.show()
+
+#Part 2: Epidemic
+
+def sick(t, y, alpha, beta, total_population):
+    """extended Lotka-Volterra model"""
+    x, y, z = y
+    dx_dt = -alpha * x * y  #rate of change of healthy
+    dy_dt = alpha * x * y - beta * y   #rate of change of sick
+    dz_dt = beta * y  #rate of change of immune (recovered or dead)
+    
+    norm_factor = total_population / (x + y + z) #normalizing
+    dx_dt *= norm_factor
+    dy_dt *= norm_factor
+    dz_dt *= norm_factor
+
+    return [dx_dt, dy_dt, dz_dt]
+
+#initial conditions
+x0 = 100000  #healthy population
+y0 = 1   #sick population 
+z0 = 0   #immune population
+initial_conditions = [x0, y0, z0]
+
+#parameters:
+alpha = 0.000001    #sick spread rate
+beta = 0.01    #how long illness lasts
+
+total_population = x0 + y0 + z0
+
+t_span = (0, 500)
+t_eval = np.linspace(0, 500, 1000)
+
+# Solve the differential equations using solve_ivp
+sol = solve_ivp(sick, t_span, initial_conditions, args=(alpha, beta, total_population), t_eval=t_eval, rtol = 1e-9)
+
+# Plot the solutions
+plt.scatter(sol.t, sol.y[0], color = 'b', s = 5, label='Healthy')
+plt.scatter(sol.t, sol.y[1], color = 'orange', s = 5, label='Sick')
+plt.scatter(sol.t, sol.y[2], color = 'green', s = 5, label='Immune')
+plt.xlabel('Time (days)')
+plt.ylabel('Population Size')
+plt.title('Epidemic Populations')
+plt.legend()
+plt.grid()
+plt.show()
+
+sick_curve = sol.y[1]
+sick_days = sol.t
+max_sick = np.max(sick_curve)
+print("Total sick at peak of epidemic:", math.trunc(max_sick))
+
+for k in range(0, 500):
+    if sick_curve[k] == max_sick:
+        print("Number of days before the peak hits:", math.trunc(sick_days[k]))
+    else:
+        p =2
