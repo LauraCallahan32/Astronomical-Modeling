@@ -1,0 +1,1 @@
+#These files are assignments from my Modeling course at Villanova University, meant to teach me how to problem solve using Python. The problems range from astrodynamics to population models to data analytics
