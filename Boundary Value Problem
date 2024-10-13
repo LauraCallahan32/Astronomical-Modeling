@@ -62,3 +62,70 @@ plt.ylabel('Vertical Distance (m)')
 plt.legend()
 plt.grid(True)
 plt.show()
+
+
+#Part 2: Two-Body Problem
+
+#In this section I am launching a rocket in the direction of the Moon and seeing how the initial conditions affect the trajectory of the rocket
+
+def gravity_assist(t, u):
+    """Equations of motion"""
+    x, y, vx, vy = u
+    
+    drdt = [vx, vy]
+    
+    G = 6.67430e-11
+    M = 7.35e22
+    
+    r = np.sqrt(x**2 + y**2)
+    dvdt = [-G * M * x / r**3, -G * M * y / r**3]
+    return drdt + dvdt
+
+
+#initial conditions
+r0 = [1.0e6, 1.0e4]
+v0 = [-1.0e4, -5.0e1]
+u0 = r0 + v0 #initial state vector
+
+t_span = [0, 200]  #simulation time (s)
+
+#solve the differential equation
+sol = solve_ivp(gravity_assist, t_span, u0, method='RK45', dense_output = True, max_step = 0.01)
+
+#extract the trajectory
+x_traj, y_traj = sol.y[0], sol.y[1]
+
+plt.figure(figsize=(6, 4))
+plt.scatter(x_traj, y_traj, label='Trajectory', color='blue')
+plt.plot(0, 0, 'o', color='red', label='Moon')
+plt.title('Rocket Trajectory')
+plt.xlabel('Horizontal Distance (km)')
+plt.ylabel('Vertical Distance (km)')
+plt.legend()
+plt.grid(True)
+plt.show() #This plot shows me successfully turning a rocket around by slingshotting around the Moon
+
+#Now increase the velocity in the negative-x direction and decrease the simulation time to see the rocket deviate course slightly, as opposed to slingshotting around:
+
+#initial conditions
+r0 = [1.0e6, 1.0e4]
+v0 = [-1.0e5, -5.0e1]
+u0 = r0 + v0 #initial state vector
+
+t_span = [0, 20]  #simulation time (s)
+
+#solve the differential equation
+sol = solve_ivp(gravity_assist, t_span, u0, method='RK45', dense_output = True, max_step = 0.01)
+
+#extract the trajectory
+x_traj, y_traj = sol.y[0], sol.y[1]
+
+plt.figure(figsize=(6, 4))
+plt.scatter(x_traj, y_traj, label='Trajectory', color='blue')
+plt.plot(0, 0, 'o', color='red', label='Moon')
+plt.title('Rocket Trajectory')
+plt.xlabel('Horizontal Distance (km)')
+plt.ylabel('Vertical Distance (km)')
+plt.legend()
+plt.grid(True)
+plt.show()
