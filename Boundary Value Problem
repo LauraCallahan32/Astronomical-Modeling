@@ -1,0 +1,64 @@
+#The Boundary Value Problem requires us to find the initial values that will result in a predetermined final condition
+#I explored two scenarios: a projectile only influenced by Earth's gravity, and a two-body problem using a body in space to alter a projectile's trajectory
+
+#Part 1: Earth's Gravity
+
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.integrate import solve_ivp
+from scipy.optimize import minimize
+
+def projectile(t, u, angle, velocity):
+    """Equations of motion"""
+    x, y, vx, vy = u
+    g = 9.8 
+
+    dxdt = vx
+    dydt = vy
+    dvxdt = 0
+    dvydt = -g
+
+    return [dxdt, dydt, dvxdt, dvydt]
+
+def wrapper_objective_function(params, target_coordinates, fixed_time_of_flight):
+    """solving for optimized final coordinates"""
+    angle, velocity = params
+    u0 = [0, 0, velocity * np.cos(np.radians(angle)), velocity * np.sin(np.radians(angle))]
+    sol = solve_ivp(projectile, [0, fixed_time_of_flight], u0, args=(angle, velocity), method='RK45', dense_output=True)
+    
+    final_x, final_y = sol.sol(fixed_time_of_flight)[:2]
+    
+    diff_coordinates = np.array([final_x - target_coordinates[0], final_y - target_coordinates[1]])
+    
+    return np.linalg.norm(diff_coordinates)
+
+target_coordinates = [1, 1]
+
+fixed_time_of_flight = 1.0 
+
+initial_guess = [20, 10]  #[angle in degrees, velocity in m/s] - this guess will be optimized
+
+result = minimize(wrapper_objective_function, initial_guess, args=(target_coordinates, fixed_time_of_flight), method='Nelder-Mead')
+
+optimal_angle, optimal_velocity = result.x
+
+print("Optimal Angle:", optimal_angle, "degrees")
+print("Optimal Velocity:", optimal_velocity, "m/s")
+print("Fixed Time of Flight:", fixed_time_of_flight, "seconds")
+
+u0 = [0, 0, optimal_velocity * np.cos(np.radians(optimal_angle)), optimal_velocity * np.sin(np.radians(optimal_angle))] #putting the optimized values into the equations of motion array
+sol = solve_ivp(projectile, [0, fixed_time_of_flight], u0, args=(optimal_angle, optimal_velocity), dense_output=True)
+
+#Plotting the trajectory
+t_plot = np.linspace(0, fixed_time_of_flight, 1000)
+trajectory = sol.sol(t_plot)
+
+plt.figure(figsize=(8, 6))
+plt.scatter(trajectory[0], trajectory[1], label='Rocket Trajectory')
+plt.scatter(*target_coordinates, color='red', s = 70, label='Target Coordinates')
+plt.title('Projectile Motion')
+plt.xlabel('Horizontal Distance (m)')
+plt.ylabel('Vertical Distance (m)')
+plt.legend()
+plt.grid(True)
+plt.show()
